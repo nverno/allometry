@@ -1,0 +1,14 @@
+\documentclass{article}
+\begin{document}
+<<echo=FALSE,results=hide>>=
+library(plyr)
+library(xtable)
+test <- read.csv("comp.csv")
+@
+
+\begin{figure}
+<<fig=TRUE,width=12,height=6,echo=FALSE>>=
+print(with(test, plot(dbh,ht)))
+@
+\end{figure}
+\end{document}

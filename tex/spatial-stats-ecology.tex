@@ -1,0 +1,23 @@
+\documentclass{article}
+
+\begin{document}
+\section{Spatial patterns}
+spatial patterns can be viewed as the realization of point processes.
+Spatial patterns of trees using pair-correlation function: estimates tree density at a distance $r$ around a tree and is normalized to have a value of 1 in the case of a completely random pattern of tree locations.  Value greater than 1 if clumped. (Suzuki et al. 2012)
+
+ 
+Mark-variogram, mark correlation: to analyze the local spatial size structure in a stand (Suzuki et al. 2012).
+The mark-variogram is indicator of the similarity of marks (the difference in a parameter value) between two points separated by a given distance.  Smaller value means spatial autocorrelation (values similar between points).  Small values of mark-correlation mean small differences between points separated by small distances.
+
+\section{Simulation}
+Monte-carlo simulation to determine confidence intervals for mark-correlation (Suzuki et al. 2012).  They generated same number of points as trees for each plot ('complete spatial randomness') and randomly assigned the observed heights to their simulated data.  The null hypothesis was that tree heights were randomly placed in a plot. All their simulations involved random generation of spatial data.
+\\
+Magnussen 2012: simulated 4 forest plots using different methods - poisson, Matern (Picard et al 2005), Uniform (Bondesson and Fahlten 2003),
+Strauss (Strauss 1975)
+
+\section{Point Processes}
+We need point process that can generate clustered patterns and can be \textbf{simulated}.
+Matern point process - generate clustered spatial patterns (Picard et al 2005).  Take three parameters: dispersion distance, density of parent points, and mean number of daughter points per parent.  Parent points are drawn according to a homogenous Poisson process (with density of parent points), then each parent point generates its daughter points (iid by Poisson distribution with parameter = mean number daughters/parent), the daughters of each parent are distributed it the disk radius around parent (determined by initial dispersion parameter).  The final field is then the union of all the daughter points.
+
+  
+\end{document}

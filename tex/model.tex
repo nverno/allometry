@@ -1,0 +1,25 @@
+\documentclass{article}
+\title{Neighborhood Models}
+
+\begin{document}
+\maketitle
+
+
+\section{Simplest}
+The 'simplest' neighborhood model takes the form:
+
+\begin{equation}
+  rGR = PG * Competition\,\, {effect}
+\end{equation}
+Here, if we have a proper envelope, $PG$ should be estimated to be 1.  Thus the equation
+becomes:
+\begin{equation}
+  rGR = exp \left ( -C \sum^N_j \frac{bvs_{j}^\alpha}{distances_{ij}^\beta} \right )
+\end{equation}
+where N is the number of neighbors for a given target tree $i$, and T is the number of target trees.  Then, $distances_{ij}$ is the distance between target $i$ and neighbor $j$,
+and $bv_j$ is the bole volume of neighbor $j$.
+
+\end{document}
+
+
+

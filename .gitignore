@@ -1,0 +1,8 @@
+*.R~
+*.Rhistory
+*#
+*~
+*.log
+*.aux
+tex/_*
+tex/auto/
