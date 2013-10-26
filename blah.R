@@ -1,6 +1,7 @@
 bclong <- read.csv("long-bc-derived.csv")
 
-
+x < -1
+tst <- function(y) { print(environment()); y + x }
 
 
 
