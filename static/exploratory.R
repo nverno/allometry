@@ -77,7 +77,9 @@ above <- ddply(abba, .(elevcl), .fun = function(x) {
                above = x$ht/x$canht > predict(mod, newdata = x, na.action = NA))
 })
 ## join above data back to abba
-abba <- merge(abba, above, by = c("pplot", "time", "id", "aspcl"))
+abba <- merge(abba, above, by = c("pplot", "time", "id", "elevcl"))
 ggplot(abba, aes(dbh, ht/canht, color = died, group = died)) + geom_point(alpha = 0.5) +
-    facet_wrap(~above + aspcl) +
+    facet_wrap(~above + elevcl) +
     geom_smooth(method = "loess")
+high <- subset(abba, elevcl == "H")
+summary(lm(died ~ above, data = subset(abba, elevcl == "H")))
