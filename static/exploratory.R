@@ -67,3 +67,17 @@ abba <- merge(abba, above, by = c("pplot", "time", "id", "aspcl"))
 ggplot(abba, aes(dbh, ht/canht, color = died, group = died)) + geom_point(alpha = 0.5) +
     facet_wrap(~above + aspcl) +
     geom_smooth(method = "loess")
+
+## By ELEVCL
+abba <- subset(pp,spec == "ABBA" & pplot > 3 & !is.na(canht) & !is.na(ht) & !is.na(dbh))
+above <- ddply(abba, .(elevcl), .fun = function(x) {
+    x <- droplevels(x);
+    mod <- nls( (ht/canht) ~ a * dbh ^ b, start = list(a = 0.5, b = 1), data = x )
+    data.frame(id = x$id, pplot = x$pplot, time = x$time,
+               above = x$ht/x$canht > predict(mod, newdata = x, na.action = NA))
+})
+## join above data back to abba
+abba <- merge(abba, above, by = c("pplot", "time", "id", "aspcl"))
+ggplot(abba, aes(dbh, ht/canht, color = died, group = died)) + geom_point(alpha = 0.5) +
+    facet_wrap(~above + aspcl) +
+    geom_smooth(method = "loess")

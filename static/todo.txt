@@ -1,0 +1,6 @@
+quantitative deviance
+size classes separately
+allometry response to plot/neighborhood changes
+species differences (a,p,b)
+geospatial differences (elev, asp, plot)
+
