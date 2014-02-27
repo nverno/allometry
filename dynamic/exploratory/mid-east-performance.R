@@ -55,6 +55,7 @@ ggplot(tst, aes(dbh, ht/dbh, group = id, col = died)) +
 ggplot(tst, aes(time, canht, group = pplot, col = pplot)) +
     geom_point() + geom_path(arrow = arrow()) + facet_wrap(~pplot)
 
+
 ## density changes
 dens <- ddply(tst, .(pplot, time), .fun = function(x) {
     x <- droplevels(x);
