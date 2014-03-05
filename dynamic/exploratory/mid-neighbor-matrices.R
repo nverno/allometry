@@ -1,5 +1,6 @@
 ## Create a neighborhood model with crowding and dbh as independent variables
 ##  and growth in height or dbh as dependent variables
+source("~/work/functions/functions-neighborhood.R")
 source("~/work/functions/functions-datatrans.R")
 source("~/work/functions/functions-growth.R")
 source("~/work/functions/functions.R")
