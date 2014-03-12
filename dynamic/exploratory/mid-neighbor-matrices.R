@@ -36,11 +36,11 @@ grew <- which(!is.na(targets[,dep.var]) & targets$spec==spec & targets[,dep.var]
 targets <- targets[grew,]
 
 # make neighbor matrices using square radius (i.e bqudx,bqudy)
-make.neighbor.matrices(targets, neighbors, sr, ind.var=ind.var, bigger=TRUE)
+mats <- make.neighbor.matrices(targets, neighbors, sr, ind.var=ind.var, bigger=TRUE)
 
 ## Assign Neighbor variables
-targets$sumBa <- rowSums(bas, na.rm=T)
-targets$nDen <- rowSums(!is.na(bas))
+targets$sumBa <- rowSums(mats[["variable"]], na.rm=T)
+targets$nDen <- rowSums(!is.na(mats[["variable"]]))
 
 ## visualize
 table(targets$pplot)
@@ -70,5 +70,39 @@ ggplot(targets, aes(nDen, ht/dbh, col = died)) +
     ggtitle("Mid East Performers") +
     xlim(0,20) + ylim(0.3,1.5) + geom_smooth()
 
+## Surroundedness
+## ** Make this into a function
+## use mats[["direction_x"]]  and mats[["direction_y"]]
+nebsize <- surround(sr)
+crowd <- sapply(1:nrow(targets), FUN = function(i) {
+    rows <- unique(data.frame(
+        row_x = mats[["direction_x"]][i,],
+        row_y = mats[["direction_y"]][i,]))
+    rows <- rows[complete.cases(rows),]
+    rows <- rows[!(rows[,1] == 0 & rows[,2] == 0),]
+    nrow(rows) / nebsize
+})
+
+## Visualize bagrowth vs crowdedness
+targets$crowd <- crowd
+ggplot(targets, aes(crowd, bagrowth)) + geom_point()
+ggplot(targets, aes(crowd, bagrowth, group = id, col = factor(pplot))) + geom_path(arrow = arrow())
+
+## bagrowth vs crowdedness * sum neighbor BA
+ggplot(targets, aes(sumBa*crowd, htgrowth/dbhgrowth, group = id, col = factor(pplot))) +
+    geom_path(arrow = arrow())
 
 
+
+## simple glm
+mod1 <- glm(bagrowth ~ priorba * (crowd + sumBa), data = targets)
+mod2 <- glm(bagrowth ~ priorba * crowd, data = targets)
+mod3 <- glm(bagrowth ~ priorba * sumBa, data = targets)
+anova(mod1, mod2, mod3, test = "Chisq")
+plot(mod2)
+## plot
+tst <- targets
+tst$pred <- predict(mod2)
+
+ggplot(tst, aes(bagrowth, priorba)) + geom_point(color = "blue") +
+    geom_point(aes(pred, priorba, color = "red"))
