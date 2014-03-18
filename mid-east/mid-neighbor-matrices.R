@@ -71,28 +71,15 @@ ggplot(targets, aes(nDen, ht/dbh, col = died)) +
     xlim(0,20) + ylim(0.3,1.5) + geom_smooth()
 
 ## Surroundedness
-## ** Make this into a function
-## use mats[["direction_x"]]  and mats[["direction_y"]]
-nebsize <- surround(sr)
-crowd <- sapply(1:nrow(targets), FUN = function(i) {
-    rows <- unique(data.frame(
-        row_x = mats[["direction_x"]][i,],
-        row_y = mats[["direction_y"]][i,]))
-    rows <- rows[complete.cases(rows),]
-    rows <- rows[!(rows[,1] == 0 & rows[,2] == 0),]
-    nrow(rows) / nebsize
-})
+targets$crowd <- percSurround(sr, targets, mats)
 
 ## Visualize bagrowth vs crowdedness
-targets$crowd <- crowd
 ggplot(targets, aes(crowd, bagrowth)) + geom_point()
 ggplot(targets, aes(crowd, bagrowth, group = id, col = factor(pplot))) + geom_path(arrow = arrow())
 
 ## bagrowth vs crowdedness * sum neighbor BA
 ggplot(targets, aes(sumBa*crowd, htgrowth/dbhgrowth, group = id, col = factor(pplot))) +
     geom_path(arrow = arrow())
-
-
 
 ## simple glm
 mod1 <- glm(bagrowth ~ priorba * (crowd + sumBa), data = targets)
@@ -104,5 +91,5 @@ plot(mod2)
 tst <- targets
 tst$pred <- predict(mod2)
 
-ggplot(tst, aes(bagrowth, priorba)) + geom_point(color = "blue") +
-    geom_point(aes(pred, priorba, color = "red"))
+ggplot(tst, aes(priorba, bagrowth, color = crowd)) + geom_point() +
+    geom_point(aes(priorba, pred), pch = 3)
