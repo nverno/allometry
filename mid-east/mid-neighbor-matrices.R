@@ -16,7 +16,7 @@ pp <- read.csv("~/work/data/data/dynamicallometry/moose-long-canopies.csv")
 ##  it gets a 1
 pp$died <- ifelse(!is.na(pp$yrmort), 1, 0)
 
-# choose sr(sr must be >= 1) and other variables
+## choose sr(sr must be >= 1) and other variables
 sr <- 2
 spec <- "ABBA"
 dep.var <- "bagrowth"
@@ -25,17 +25,28 @@ ind.var <- "ba"
 ## mid-east subset
 dat <- subset(pp, pplot %in% c(8,9,11))
 
-# define targets and neighbors, for moose data
+## define targets and neighbors, for moose data
 targets <- subset(dat, bqudx < (12-sr) & bqudx > (-1 + sr) & bqudy < (12 - sr) &
                   bqudy > (-1 + sr) & stat=="ALIVE")
 neighbors <- subset(dat, bqudx < 11 & bqudx > 0 & bqudy < 11 &
                     bqudy > 0 & stat=="ALIVE")
 
-# remove trees that dont satisfy certain conditions
+## mod <- nls(ht ~ a*dbh^b, start = list(a=1,b=1), data = targets)
+## xs <- 1:100
+## plot(targets$dbh, predict(mod, targets))
+## points(targets$ht, (targets$ht/1.67)^(1/0.67), col="red")
+x = 1:100
+y = 2*(x + rnorm(100))
+l1 <- lm(x ~ y)
+l2 <- lm(y ~ x)
+ll1 <- lm(dbh ~ ht, data = targets)
+ll2 <- lm(ht ~ dbh, data = targets)
+
+## remove trees that dont satisfy certain conditions
 grew <- which(!is.na(targets[,dep.var]) & targets$spec==spec & targets[,dep.var]>0)
 targets <- targets[grew,]
 
-# make neighbor matrices using square radius (i.e bqudx,bqudy)
+## make neighbor matrices using square radius (i.e bqudx,bqudy)
 mats <- make.neighbor.matrices(targets, neighbors, sr, ind.var=ind.var, bigger=TRUE)
 
 ## Assign Neighbor variables
