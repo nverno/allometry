@@ -34,7 +34,7 @@ grew <- which(!is.na(targets[,dep.var]) & targets$spec==spec & targets[,dep.var]
 abbas <- targets[grew,]
 
 # make neighbor matrices using square radius (i.e bqudx,bqudy)
-abba_mats<- make.neighbor.matrices(abbas, sr, ind.var=ind.var, bigger=TRUE)
+abba_mats<- make.neighbor.matrices(targets, neighbors, sr, ind.var=ind.var, bigger=TRUE)
 
 ##################################################################################
 ##
@@ -51,10 +51,16 @@ pirus <- targets[grew,]
 piru_mats<- make.neighbor.matrices(pirus, sr, ind.var=ind.var, bigger=TRUE)
 
 
-x <- 2
-y <- 4
-tst <- function(x, bool1=TRUE, y=y, bool2=FALSE) {
-    ifelse(bool2, print("bool2"), print("notbool2") )
-    ifelse(bool1, print("bool1"), print("notbool1") )
-    return (x * y)
-}
+##################################################################################
+## Timing
+library(rbenchmark)
+benchmark(make.neighbor.matrices(targets, neighbors, sr, ind.var=ind.var, bigger=TRUE),
+          mnm(targets, neighbors, sr, ind.var=ind.var, bigger=TRUE),
+          columns = c("test", "replications", "elapsed", "relative"),
+          order = "relative", replications = 5)
+
+## 2                   mnm(targets, neighbors, sr, ind.var = ind.var, bigger = TRUE)
+## 1 make.neighbor.matrices(targets, neighbors, sr, ind.var = ind.var, bigger = TRUE)
+##   replications elapsed relative
+## 2            5  16.862    1.000
+## 1            5  32.681    1.938
