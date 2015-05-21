@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:24:15 2015 (-0400)
-## Last-Updated: Tue May 19 11:24:28 2015 (-0400)
+## Last-Updated: Wed May 20 09:36:06 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(bbmle)
@@ -35,18 +35,18 @@ gompertz <- function(ps, dbh, elev, canht) {
     beta*exp( log(gamma/beta)*exp( -alpha*dbh ) )
 }
 
-## Probably need to run once with simulated annealing to get some reasonable
-## parameters, then polish off with nelder-mead if necessary
+## run model
 run_fit <- function(dat, ps, yr, method="Nelder-Mead", maxit=1e5) {
     require(bbmle)
     parnames(normNLL) <- c(names(ps))
     ht <- paste0("HTTCR", yr)
     dbh <- paste0("DBH", yr)
+    canht <- paste0("canht", yr)
     summary(fit <- mle2(normNLL,
                         start = unlist(ps,recursive = FALSE),
                         data = list(x = dat[, ht], dbh=dat[, dbh], elev=dat[, "ELEV"],
-                                    canht=dat[,"canht"]),
-                        method = method,
+                                    canht=dat[,canht]),
+                        ## method = method,
                         control = list(maxit = maxit)))
     return( fit )
 }
