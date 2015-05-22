@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:22:39 2015 (-0400)
-## Last-Updated: Thu May 21 19:34:29 2015 (-0400)
+## Last-Updated: Thu May 21 20:44:55 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
@@ -89,8 +89,6 @@ for (i in 1:reps) {
               else if (showRes)
                   points(preds[iis$ix], samp[,ht] - preds[iis$ix], col=i, pch=16, alpha=0.5)
         }
-        
-        
     }
 }
 
@@ -127,7 +125,7 @@ while(dev.cur())
 
 ## Using boot package (basic non-parametric boot)
 library(boot)
-bootGomp <- function(data, indices, ps, maxit=1e8, yr=98) {
+bootGomp <- function(data, indices, ps, maxit=1e5, yr=98) {
     data <- data[indices, ]
     mod <- run_fit(data, ps=ps, yr=98, method="SANN", maxit=maxit)
     coef(mod)
