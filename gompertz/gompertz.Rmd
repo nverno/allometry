@@ -1,0 +1,26 @@
+---
+title: "Gompertz"
+date: "Generated: `r Sys.Date()`"
+runtime: shiny
+output:
+    html_document:
+        toc: true
+        toc_depth: 3
+        theme: spacelab
+        highlight: zenburn
+        number_sections: false
+---
+
+```{r global_opts, include=FALSE}
+
+knitr::opts_chunk$set(fig.path="Figs/", echo=FALSE, warning=FALSE,
+                      message=FALSE, dev='svg')
+
+```
+
+Gompertz Model:
+$$
+\alpha = a + a_1 \textrm{elev} + a_2 \textrm{canht} + a_3 \textrm{elev*canht} \\
+\beta = b + b_1 \textrm{elev} + b_2 \textrm{canht} + b_3 \textrm{elev*canht} \\
+\beta e^{log(\frac{\gamma}{\beta}) e ^{-\alpha \ \textrm{dbh}}}
+$$

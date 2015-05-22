@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:22:39 2015 (-0400)
-## Last-Updated: Fri May 22 00:31:29 2015 (-0400)
+## Last-Updated: Fri May 22 17:04:59 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
@@ -28,19 +28,23 @@ ht <- paste0("HTTCR", yr)
 canht <- paste0("cht", yr)
 dat <- pp[pp[,stat] == "ALIVE" & pp$SPEC == "ABBA" & !is.na(pp[,dbh]) &
              !is.na(pp[,ht]), ]
-ps <- readRDS("~/work\\ecodatascripts\\vars\\heights\\gompertz\\full\\abba\\abba_98.rds")
+## ps <- readRDS("~/work\\ecodatascripts\\vars\\heights\\gompertz\\full\\abba\\abba_98.rds")
+## Zach's starting values
+ps <- list(a=0.199, a1=0.000251, a2=0.00511, a3=-0.0000141, b=2.31, b1=0.00410, b2=0.92, b3=-0.000271,
+           sd=1)
 
 ## Fitting parameters
-reps <- 20         # number of bootstraps
+reps <- 100        # number of bootstraps
 nqs <- 5           # number of quantiles (may be shortened if quantiles overlap)
-p <- 0.1           # % of smallest quantile to sample
+p <- 0.5           # % of smallest quantile to sample
 showPlot <- TRUE   # show plot as fitting
 showRes <- TRUE    # show residuals
 
 ## construct quantiles
 qs <- unique(quantile(dat[,dbh], probs = seq(0, 1, 1/nqs)))
 ## dat$qs <- cut(dat[,dbh], qs, include.lowest = TRUE)
-dat$qs <- cut(dat[,dbh], breaks=c(-1, 5, 15, 50))
+## dat$qs <- cut(dat[,dbh], breaks=c(-1, 5, 15, 50))
+dat$qs <- cut(dat[,dbh], breaks=c(-1, 50))
 nqs <- length(names(table(dat$qs)))
 inds <- lapply(names(table(dat$qs)), function(x) which(dat$qs == x))
 n <- floor(min(p*unlist(lapply(inds, length))))  # num. samples/quantile
@@ -65,12 +69,12 @@ res <- unlist(ps)
 for (i in 1:reps) {
     ii <- unlist(lapply(inds, function(x) sample(x, n, replace=T)))
     samp <- dat[ii,]
-    points(samp[,dbh], samp[,ht], col = i)
+    points(samp[,dbh], samp[,ht], col=i)
     fit <- NULL
     ## try({
     ## form <- as.formula(paste(ht, "~", "a*", dbh, "^b"))
     ## fit <- nls(HTTCR98 ~ a * DBH98 ^ b, start=list(a=0.5, b=0.1), data=samp)
-    fit <- run_fit(samp, ps, 98, method="SANN", maxit=2e6)
+    fit <- run_fit(samp, ps, 98, method="Nelder-Mead", maxit=2e6)
     params <- coef(fit)
     ## }, silent = TRUE)
     if (!is.null(fit)) {
@@ -91,11 +95,16 @@ for (i in 1:reps) {
                   points(preds[iis$ix], samp[,ht] - preds[iis$ix], col=i, pch=16, alpha=0.5)
         }
     }
+    ## identify(samp[,dbh], samp[,ht], labels=round(samp$cht98, 2))
 }
 
 ## std. error of estimates
+ests <- colMeans(res)
+fit <- run_fit(dat, ps, 98, method="Nelder-Mead")
 stdErr <- matrix(sqrt(diag(cov(res)) / nrow(res)))
-bias <- matrix(colSums(res - colMeans(res)) / nrow(res))
+as.matrix(data.frame(Estimate=ests, Std=stdErr, Cov=stdErr/colMeans(res)*100))
+
+## bias <- matrix(colSums(res - colMeans(res)) / nrow(res))
 while(dev.cur())
     dev.off()
 
