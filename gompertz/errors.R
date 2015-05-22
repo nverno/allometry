@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:22:39 2015 (-0400)
-## Last-Updated: Thu May 21 20:44:55 2015 (-0400)
+## Last-Updated: Fri May 22 00:31:29 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
@@ -39,7 +39,8 @@ showRes <- TRUE    # show residuals
 
 ## construct quantiles
 qs <- unique(quantile(dat[,dbh], probs = seq(0, 1, 1/nqs)))
-dat$qs <- cut(dat[,dbh], qs, include.lowest = TRUE)
+## dat$qs <- cut(dat[,dbh], qs, include.lowest = TRUE)
+dat$qs <- cut(dat[,dbh], breaks=c(-1, 5, 15, 50))
 nqs <- length(names(table(dat$qs)))
 inds <- lapply(names(table(dat$qs)), function(x) which(dat$qs == x))
 n <- floor(min(p*unlist(lapply(inds, length))))  # num. samples/quantile
