@@ -3,12 +3,12 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:24:15 2015 (-0400)
-## Last-Updated: Thu May 21 19:09:20 2015 (-0400)
+## Last-Updated: Sat May 23 00:17:30 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(bbmle)
 
-## log likelihood function
+## Normal log likelihood function
 normNLL <- function(params, x, dbh, elev, canht) {
     sd = params[["sd"]]
     mu = do.call(gompertz, list(params, dbh, elev, canht))

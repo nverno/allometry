@@ -1,9 +1,9 @@
 ### errors.R --- 
 ## Filename: errors.R
-## Description: 
+## Description: Bootstrap gompertz fits with even DBH distributions
 ## Author: Noah Peart
 ## Created: Tue May 19 11:22:39 2015 (-0400)
-## Last-Updated: Fri May 22 20:34:59 2015 (-0400)
+## Last-Updated: Sat May 23 00:16:54 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
