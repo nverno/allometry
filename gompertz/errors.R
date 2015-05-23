@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:22:39 2015 (-0400)
-## Last-Updated: Fri May 22 17:04:59 2015 (-0400)
+## Last-Updated: Fri May 22 20:34:59 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
@@ -142,3 +142,8 @@ bootGomp <- function(data, indices, ps, maxit=1e5, yr=98) {
 }
 
 packageRes <- boot(data=dat, statistic=bootGomp, ps=ps, R=100)
+
+pow <- function(x) 2*x^3
+x <- 1:100
+y <- 1:100
+tst <- rnorm(pow, )
