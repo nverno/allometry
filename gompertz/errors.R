@@ -3,22 +3,14 @@
 ## Description: Bootstrap gompertz fits with even DBH distributions
 ## Author: Noah Peart
 ## Created: Tue May 19 11:22:39 2015 (-0400)
-## Last-Updated: Sat May 23 00:16:54 2015 (-0400)
+## Last-Updated: Sat May 23 18:05:47 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
-pp <- read.csv("~/work/treedata/pp.csv")
-
-## local canopies -- follow zach's subsetting procedure and local canopy construction
-pp <- pp[!is.na(pp$HTTCR98) & pp$HTTCR98 > 0, ]
-pp$cht98 <- NA
-for (i in 1:nrow(pp))
-    pp$cht98[i] <- max(pp[pp$BQUDX >= pp$BQUDX[i]-1 & pp$BQUDY >= pp$BQUDY[i]-1 &
-                              pp$BQUDX <= pp$BQUDX[i]+1 & pp$BQUDY <= pp$BQUDY[i]+1 & pp$PPLOT == pp$PPLOT[i],
-                          "HTTCR98"])
-pp <- pp[!is.na(pp$DBH98) & pp$DBH98 > 0 & !is.na(pp$cht98) & pp$BQUDX > 1 & pp$BQUDX < 10 &
-             pp$BQUDY > 1 & pp$BQUDY < 10, ]
-pp <- pp[pp$SPEC == "ABBA", ]
+## source("~/work/allometry/gompertz/zach_setup.R")
+pp <- readRDS("~/work/allometry/gompertz/temp/pp.rds")
+res <- lm(ELEV ~ cht98, data=pp)
+pp$relev <- residuals(res)
 
 ## Bootstrap for 98 data, sampling equally from quantiles of DBH98
 yr <- 98
@@ -26,15 +18,16 @@ stat <- paste0("STAT", yr)
 dbh <- paste0("DBH", yr)
 ht <- paste0("HTTCR", yr)
 canht <- paste0("cht", yr)
+elev <- "relev"
 dat <- pp[pp[,stat] == "ALIVE" & pp$SPEC == "ABBA" & !is.na(pp[,dbh]) &
              !is.na(pp[,ht]), ]
 ## ps <- readRDS("~/work\\ecodatascripts\\vars\\heights\\gompertz\\full\\abba\\abba_98.rds")
-## Zach's starting values
+## Parameters from manuscript
 ps <- list(a=0.199, a1=0.000251, a2=0.00511, a3=-0.0000141, b=2.31, b1=0.00410, b2=0.92, b3=-0.000271,
            sd=1)
 
 ## Fitting parameters
-reps <- 100        # number of bootstraps
+reps <- 150         # number of bootstraps
 nqs <- 5           # number of quantiles (may be shortened if quantiles overlap)
 p <- 0.5           # % of smallest quantile to sample
 showPlot <- TRUE   # show plot as fitting
@@ -43,8 +36,8 @@ showRes <- TRUE    # show residuals
 ## construct quantiles
 qs <- unique(quantile(dat[,dbh], probs = seq(0, 1, 1/nqs)))
 ## dat$qs <- cut(dat[,dbh], qs, include.lowest = TRUE)
-## dat$qs <- cut(dat[,dbh], breaks=c(-1, 5, 15, 50))
-dat$qs <- cut(dat[,dbh], breaks=c(-1, 50))
+breaks <- c(-1, 5, 15, 50)
+dat$qs <- cut(dat[,dbh], breaks=breaks)
 nqs <- length(names(table(dat$qs)))
 inds <- lapply(names(table(dat$qs)), function(x) which(dat$qs == x))
 n <- floor(min(p*unlist(lapply(inds, length))))  # num. samples/quantile
@@ -53,7 +46,7 @@ n <- floor(min(p*unlist(lapply(inds, length))))  # num. samples/quantile
 if (showPlot && showRes) {
     dev.new()
     plot(dat[,dbh], dat[,ht], type="n", xlab=dbh, ylab=ht)
-    abline(v = qs, lty=2, lwd=2)
+    abline(v = breaks, lty=2, lwd=2)
     dev.new()
     plot(0, 0, ylim=c(-6,6),  xlim=c(min(dat[,ht]),max(dat[,ht])), type='n', main="Residuals")
     abline(h=0, lty=2)
@@ -65,37 +58,55 @@ if (showPlot && showRes) {
     abline(h=0, lty=2)
 }
 
+best_fit <- NULL
+best_aic <- NULL
 res <- unlist(ps)
 for (i in 1:reps) {
     ii <- unlist(lapply(inds, function(x) sample(x, n, replace=T)))
     samp <- dat[ii,]
     points(samp[,dbh], samp[,ht], col=i)
-    fit <- NULL
     ## try({
     ## form <- as.formula(paste(ht, "~", "a*", dbh, "^b"))
     ## fit <- nls(HTTCR98 ~ a * DBH98 ^ b, start=list(a=0.5, b=0.1), data=samp)
-    fit <- run_fit(samp, ps, 98, method="Nelder-Mead", maxit=2e6)
+    if (i %% 50 == 0) {
+        cat(paste("\nFitting with Simulated Annealing: iteration", i, "\nCurrent AIC(sample):", 
+                  AIC(fit), "\n"))
+        fit <- run_fit(samp, ps, 98, method="SANN", maxit=2e6)
+    }
+    else
+        fit <- run_fit(samp, ps, 98, method="Nelder-Mead")
     params <- coef(fit)
     ## }, silent = TRUE)
     if (!is.null(fit)) {
         res <- rbind(res, unlist(params))
         if (showPlot || showRes) {
             ## preds <- ps[1] * dd[,"DBH98"]^ps[2]
-            preds <- do.call(gompertz, list(ps=params, dbh=samp[,dbh], elev=samp[,"ELEV"], 
+            preds <- do.call(gompertz, list(ps=params, dbh=samp[,dbh], elev=samp[,elev], 
                                             canht=samp[,canht]))
             iis <- sort(samp[,dbh], index.return=TRUE)
             if (showPlot && showRes) {
                 points(iis$x, preds[iis$ix], col=i, type="l")
                 dev.set(dev.next())
-                points(preds[iis$ix], samp[,ht] - preds[iis$ix])
+                points(preds, samp[,ht]-preds, col=i)
                 dev.set(dev.prev())
             } else if (showPlot)
                 points(iis$x, preds[iis$ix], col=i, type="l")
               else if (showRes)
-                  points(preds[iis$ix], samp[,ht] - preds[iis$ix], col=i, pch=16, alpha=0.5)
+                  points(preds, samp[,ht]-preds, col=i, pch=16, alpha=0.5)
         }
     }
     ## identify(samp[,dbh], samp[,ht], labels=round(samp$cht98, 2))
+    ps <- params
+    if (i %% 5) {
+        fitAll <- run_fit(pp, ps, 98)
+        aic <- AIC(fitAll)
+        if (is.null(best_fit) || aic < best_aic) {
+            best_aic <- aic
+            best_fit <- fitAll
+            cat(paste("\nNew best AIC:", best_aic, "\n"))
+        }
+        ps <- coef(fitAll)
+    }
 }
 
 ## std. error of estimates
