@@ -1,0 +1,87 @@
+---
+title: "Bootstrap the Gompertz Curve"
+date: "Generated: `r Sys.Date()`"
+runtime: shiny
+output:
+    html_document:
+        toc: true
+        toc_depth: 3
+        theme: spacelab
+        highlight: zenburn
+        number_sections: false
+---
+
+```{r global_opts, include=FALSE}
+
+knitr::opts_chunk$set(fig.path="Figs/", echo=FALSE, warning=FALSE,
+                      message=FALSE, dev='svg')
+
+```
+
+
+-------
+
+# Info
+* [code](https://github.com/nverno/allometry)
+
+Gompterz model is fit for __1998 ABBA__ only, using __residual elevation__ (from linear model `ELEV ~ canopy98`, shown below).  Only live trees with non-missing height and dbh are included.  The model is seeded on each iteration with the parameters reported in the manuscript.  The bootstrapping is done with different sampling schemes (to determine dependence of model on size bias):
+
+    - all the data weighted equally
+	- split the data by DBH size and draw equal sized samples from each size class
+
+The gompertz model:
+$$
+\alpha = a + a_1 \textrm{elev_r} + a_2 \textrm{canht} + a_3 \textrm{elev_r*canht} \\
+\beta = b + b_1 \textrm{elev_r} + b_2 \textrm{canht} + b_3 \textrm{elev_r*canht} \\
+\beta e^{log(\frac{\gamma}{\beta}) e ^{-\alpha \ \textrm{dbh}}}
+$$
+
+
+```{r setup}
+source("~/work/allometry/gompertz/setup.R", chdir=T)
+```
+
+Seed parameters (4 digits):
+```{r params}
+renderTable({ as.data.frame(ps) }, digits=4)
+```
+
+Canopy height calculation and residual elevation:
+```{r resid_elev}
+checkboxInput("excludeTarg", "Exclude Target")
+checkboxInput("ratio", "Log Relative Canopy Height (log(target / estimate))")
+canopy <- reactive({ 
+    if (input$excludeTarg) "cht_notarget98"
+    else "cht98"
+})
+getResFit <- reactive({ 
+    canht <- canopy()
+    if (input$ratio) {
+        lcan <- ifelse(pp[,canht] > 0, log(pp[, canht]), 0)
+        est <- log(pp[, "HTTCR98"]) - lcan
+        lm(pp[,"ELEV"] ~ est)
+    } else
+        lm(pp[,"ELEV"] ~ pp[, canht])
+})
+getData <- reactive({
+    fit <- getResFit()
+    pp$relev <- residuals(fit)
+    pp
+})
+
+renderPlot({
+    dat <- getData()
+    canht <- canopy()
+    fit <- getResFit()
+    par(mfrow = c(1,2))
+    scatter.smooth(pp[,canht], pp[,"ELEV"], lpars = list(col="azure3", lty=2),
+                   xlab="Canopy Height", ylab="Elevation")
+    legend("topright", c("Fit", "Trend"), col=c("red", "azure3"), lty=c(1, 2))
+    abline(fit, col="red")
+    scatter.smooth(pp[,canht], pp[,"relev"], lpars = list(col="azure3", lty=2),
+                   xlab="Canopy Height", ylab="Residual Elevation")
+})
+
+```
+
+-------
