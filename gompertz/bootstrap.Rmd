@@ -5,7 +5,7 @@ runtime: shiny
 output:
     html_document:
         toc: true
-        toc_depth: 3
+        toc_depth: 2
         theme: spacelab
         highlight: zenburn
         number_sections: false
@@ -38,6 +38,8 @@ $$
 
 
 ```{r setup}
+library(ggplot2)
+library(MASS)
 source("~/work/allometry/gompertz/setup.R", chdir=T)
 ```
 
@@ -46,42 +48,257 @@ Seed parameters (4 digits):
 renderTable({ as.data.frame(ps) }, digits=4)
 ```
 
+------
+
+# Choose Model Parameters
+
+## Canopy/Residual Elevation
+
 Canopy height calculation and residual elevation:
 ```{r resid_elev}
+
 checkboxInput("excludeTarg", "Exclude Target")
 checkboxInput("ratio", "Log Relative Canopy Height (log(target / estimate))")
-canopy <- reactive({ 
-    if (input$excludeTarg) "cht_notarget98"
-    else "cht98"
-})
-getResFit <- reactive({ 
-    canht <- canopy()
+checkboxInput("logElev", "Log Elevation")
+getCanopy <- reactive({ 
+    canht <- ifelse(input$excludeTarg, "cht_notarget98", "cht98")
+    print(canht)
     if (input$ratio) {
         lcan <- ifelse(pp[,canht] > 0, log(pp[, canht]), 0)
-        est <- log(pp[, "HTTCR98"]) - lcan
-        lm(pp[,"ELEV"] ~ est)
+        log(pp[, "HTTCR98"]) - lcan
     } else
-        lm(pp[,"ELEV"] ~ pp[, canht])
+        pp[, canht]
+})
+getElev <- reactive({
+    if (input$logElev)
+        log(pp[,"ELEV"])
+    else
+        pp[,"ELEV"]
+})
+getResFit <- reactive({ 
+    elev <- getElev()
+    canht <- getCanopy()
+    lm(elev ~ canht)
 })
 getData <- reactive({
     fit <- getResFit()
     pp$relev <- residuals(fit)
+    pp$canht <- getCanopy()
+    pp$elev <- getElev()
     pp
 })
 
 renderPlot({
+    xlab <- ifelse(input$ratio, "Log(Height/Canopy Height)", "Canopy Height")
+    ylab <- ifelse(input$logElev, "Log Elevation", "Elevation")
     dat <- getData()
-    canht <- canopy()
     fit <- getResFit()
     par(mfrow = c(1,2))
-    scatter.smooth(pp[,canht], pp[,"ELEV"], lpars = list(col="azure3", lty=2),
-                   xlab="Canopy Height", ylab="Elevation")
+    scatter.smooth(dat[,"canht"], dat[,"elev"], lpars = list(col="azure3", lty=2),
+                   xlab=xlab, ylab=ylab)
     legend("topright", c("Fit", "Trend"), col=c("red", "azure3"), lty=c(1, 2))
     abline(fit, col="red")
-    scatter.smooth(pp[,canht], pp[,"relev"], lpars = list(col="azure3", lty=2),
-                   xlab="Canopy Height", ylab="Residual Elevation")
+    scatter.smooth(predict(fit), dat[,"relev"], lpars = list(col="azure3", lty=2),
+                   xlab="Predicted", ylab=paste("Residual", ylab, ", Obs-Pred"))
+    abline(h=0, lty=2)
+})
+
+renderPrint({
+    cat("Model Summary\n")
+    fit <- getResFit()
+    print(summary(fit))
 })
 
 ```
 
+## Size Classes
+
+Select size classes to sample evenly.  The bootstrap will sample the same number of points as the original sample (with replacement, n = `r nrow(pp)`) regardless of size class selection.  There will be three bootstraps run, one of which will sample the data without size classes (equal weighting to all data).  The size classes for the other two runs are selected below.
+
+```{r size_classes, cache=F}
+
+classes1 <- reactive({ seq(-0.01, max(pp$DBH98)+0.1, len=input$numBreaks1 + 1) })
+classes2 <- reactive({ seq(-0.01, max(pp$DBH98)+0.1, len=input$numBreaks2 + 1) })
+
+sizePlot <- renderPlot({
+    dat <- getData()
+    plot(HTTCR98 ~ DBH98, data=dat)
+    abline(v = classes1(), col="green", lwd=2)
+    abline(v = classes2(), col="orange", lwd=2, lty=2)
+    legend("topright", c("run 1", "run 2"), col=c("green", "orange"), lty=c(1,2))
+})
+
+shinyUI(fluidPage(
+    titlePanel("Select size classes"),
+    helpText("Choose sizes classes for both bootstrap runs."),
+    sidebarLayout(
+        sidebarPanel(
+            numericInput("numBreaks1", "First Run", min=2, max=10, value=4),
+            numericInput("numBreaks2", "Second Run", min=2, max=10, value=3)
+        ),
+        mainPanel(
+            sizePlot
+        )
+    )
+))
+
+```
+
 -------
+
+# Bootstrap
+Run the bootstrap
+
+**TODO**: add programmable input to define test statistic function for bootstrap
+
+```{r bootstrap}
+sliderInput("R", "Number of bootstraps", min=1, max=1000, value=1)
+checkboxInput("updatePS", "Update Parameters on each bootstrap")
+actionButton("run", "Run it!")
+results <- reactive({
+    if (input$run) {
+        dat <- getData()  # variables 'elev' and 'canht'
+        reps <- input$R
+        cl1 <- classes1()
+        cl2 <- classes2()
+        updatePS <- input$updatePS
+
+        ## Run 0: sample data equally
+        cat("\nRun 0\n")
+        inds0 <- list(a=1:nrow(dat))
+        res0 <- run_boot(dat=dat, inds=inds0, ps=ps, reps=reps, update=updatePS)
+
+        ## Run 1
+        dat$qs1 <- cut(dat[,"DBH98"], breaks=cl1)
+        inds1 <- lapply(names(table(dat$qs1)), function(x) which(dat$qs1 == x))
+        res1 <- run_boot(dat=dat, inds=inds1, ps=ps, reps=reps, update=updatePS)
+        
+        ## Run 2
+        dat$qs2 <- cut(dat[,"DBH98"], breaks=cl2)
+        inds2 <- lapply(names(table(dat$qs2)), function(x) which(dat$qs2 == x))
+        res2 <- run_boot(dat=dat, inds=inds2, ps=ps, reps=reps, update=updatePS)
+        
+        list(run0=res0, run1=res1, run2=res2)
+    }
+    else "Not Run"
+})
+
+## Reactives to result
+getStats <- reactive({
+    input$run
+    res <- isolate(results())
+    
+    if (is.list(res)) {
+        runs <- res[paste0("run", input$runs)]
+        ests <- do.call(cbind, lapply(runs, function(r) matrix(colMeans(r))))
+        stdErr <- do.call(cbind, lapply(runs, function(r) matrix(sqrt(diag(cov(r))))))
+        bias <- do.call(cbind, lapply(runs, function(r) matrix(colMeans(r - colMeans(r)))))
+        coefv <- 100 * (stdErr / ests)
+        out <- do.call(cbind, list(ests=ests, stdErr=stdErr, bias=bias, coefv=coefv))
+        colnames(out) <- paste0(rep(names(runs), times=4), ":",
+                                rep(c("estimate", "stdErr", "bias", "coefv"), each=length(names(runs))))
+        rownames(out) <- names(ps)
+        as.data.frame(out)
+    } else NULL
+})
+
+## Render result
+summCoefs <- renderTable({
+    input$run
+    res <- isolate(results())
+    if (is.list(res)) {
+        runs <- res[input$runs]
+        run <- runs[paste0("run", input$summRun)]
+        print(summary(run))
+    } else table(c())
+})
+
+plotResults <- renderPlot({
+    input$run
+    dat <- getData()
+    res <- isolate(results())
+    if (is.list(res))
+        plot(HTTCR98 ~ DBH98, data=dat)
+    else plot(0, 0, type="n")
+})
+
+statsCoefs <- renderTable({
+    input$run
+    res <- isolate(results())
+    if (is.list(res)) {
+        stats <- getStats()
+        stats[,grep(paste(input$displayStats, collapse = "|"), names(stats))]
+    } else table(c())
+})
+
+coefHist <- renderPlot({
+    input$run
+    res <- isolate(results())
+    if (is.list(res)) {
+        vals <- lapply(res, function(x) x[,colnames(x) == input$histPar])
+        dat <- data.frame(vals=unlist(vals), run=rep(names(vals), each=length(vals[[1]])))
+        ggplot(dat, aes(vals, col=run, fill=run, group=run)) + geom_density(alpha=0.3)
+    }
+})
+
+shinyUI(fluidPage(
+    titlePanel("Bootstrap Results"),
+    sidebarLayout(
+        sidebarPanel(
+            checkboxGroupInput("runs", "Show results for runs:", choices=c(0,1,2), selected=c(0,1,2),
+                               inline=T),
+            conditionalPanel(
+                condition = "input.resultTabs == 'Statistics'",
+                checkboxGroupInput("displayStats", "Show:", 
+                                   choices=c("estimate", "stdErr", "bias", "coefv"), 
+                                   selected=c("estimate", "stdErr"))
+            ),
+            conditionalPanel(
+                condition = "input.resultTabs == 'Histogram'",
+                radioButtons("histPar", "Paramater:", choices=names(ps), selected="a", inline=TRUE)
+            ),
+            conditionalPanel(
+                condition = "input.resultTabs == 'Coefficients'",
+                radioButtons("summRun", "Run:", choices=c(0,1,2), selected=1, inline=FALSE)
+            )
+        ),
+        
+        mainPanel(
+            tabsetPanel(
+                id = "resultTabs",
+                tabPanel("Coefficients", summCoefs),
+                tabPanel("Plot", plotResults),
+                tabPanel("Statistics", statsCoefs),
+                tabPanel("Histogram", coefHist)
+            )
+        )
+    )
+))
+
+renderPrint({
+    input$run
+    
+    res <- isolate(results())
+    if (is.list(res)) {
+        cl1 <- classes1()
+        cl2 <- classes2()
+        cat("Equal Weightings:\n")
+        print(summary(res[[1]]))
+        
+        cat(paste("\nRun 1: breaks= [", paste(cl1, collapse=", "), "]\n"))
+        print(summary(res[[2]]))
+        
+        cat(paste("\nRun 2: breaks= [", paste(cl2, collapse=", "), "]\n"))
+        print(summary(res[[3]]))
+    } else print(res)
+})
+
+## renderPlot({
+##     input$goButton
+    
+##     dist <- isolate(rnorm(input$obs))
+##     hist(dist)
+## })
+
+
+```

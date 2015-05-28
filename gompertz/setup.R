@@ -3,11 +3,11 @@
 ## Description: Setup data for bootstrap.Rmd
 ## Author: Noah Peart
 ## Created: Wed May 27 12:59:58 2015 (-0400)
-## Last-Updated: Wed May 27 13:44:07 2015 (-0400)
+## Last-Updated: Wed May 27 16:25:55 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
-
 source("~/work/allometry/gompertz/model.R")
+source("~/work/allometry/gompertz/run_boot.R")
 ## source("~/work/allometry/gompertz/zach_setup.R")
 pp <- readRDS("~/work/allometry/gompertz/temp/pp.rds")
 res <- lm(ELEV ~ cht98, data=pp)

@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:24:15 2015 (-0400)
-## Last-Updated: Sat May 23 17:36:38 2015 (-0400)
+## Last-Updated: Wed May 27 17:18:24 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(bbmle)
@@ -36,13 +36,13 @@ gompertz <- function(ps, dbh, elev, canht) {
 }
 
 ## run model
-run_fit <- function(dat, ps, yr, method="Nelder-Mead", maxit=1e5, height="HTTCR",
-                    dbh="DBH", canht="cht", elev="relev", ...) {
+run_fit <- function(dat, ps, yr, method="Nelder-Mead", maxit=1e5, height="HTTCR98",
+                    dbh="DBH98", canht="canht", elev="relev", ...) {
     require(bbmle)
     parnames(normNLL) <- c(names(ps))
-    ht <- paste0(height, yr)
-    dbh <- paste0(dbh, yr)
-    canht <- paste0(canht, yr)
+    ## ht <- paste0(height, yr)
+    ## dbh <- paste0(dbh, yr)
+    ## canht <- paste0(canht, yr)
     fit <- mle2(normNLL,
                 start = unlist(ps,recursive = FALSE),
                 data = list(x = dat[, ht], dbh=dat[, dbh], elev=dat[, elev],
