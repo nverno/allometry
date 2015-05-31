@@ -3,12 +3,13 @@
 ## Description: Helpers to run bootstrap for bootstrap.Rmd
 ## Author: Noah Peart
 ## Created: Wed May 27 16:15:43 2015 (-0400)
-## Last-Updated: Wed May 27 20:00:40 2015 (-0400)
+## Last-Updated: Sat May 30 22:35:09 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 run_boot <- function(dat, inds, ps, reps, update=FALSE, n=nrow(dat), elev="elev", 
-                     dbh="DBH98", canht="canht", ht="HTTCR98") {
+                     dbh="DBH98", canht="canht", ht="HTTCR98", nPerClass=FALSE) {
     res <- unlist(ps)
+    if (!nPerClass) n <- n / ceiling(length(inds))
     for (i in 1:reps) {
         ii <- unlist(lapply(inds, function(x) sample(x, n, replace=T)))
         samp <- dat[ii,]
