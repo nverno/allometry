@@ -3,10 +3,10 @@
 ## Description: Helpers to run bootstrap for bootstrap.Rmd
 ## Author: Noah Peart
 ## Created: Wed May 27 16:15:43 2015 (-0400)
-## Last-Updated: Sat May 30 22:35:09 2015 (-0400)
+## Last-Updated: Sun May 31 18:02:24 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
-run_boot <- function(dat, inds, ps, reps, update=FALSE, n=nrow(dat), elev="elev", 
+run_boot <- function(dat, inds, ps, reps, update=FALSE, n=nrow(dat), elev="relev", 
                      dbh="DBH98", canht="canht", ht="HTTCR98", nPerClass=FALSE) {
     res <- unlist(ps)
     if (!nPerClass) n <- n / ceiling(length(inds))
@@ -25,9 +25,19 @@ run_boot <- function(dat, inds, ps, reps, update=FALSE, n=nrow(dat), elev="elev"
         fit <- run_fit(samp, ps, 98, method="Nelder-Mead", dbh=dbh, height=ht, canht=canht, elev=elev)
         ## }, silent = TRUE)
         res <- rbind(res, unlist(coef(fit)))
+        ## if (alpha_beta) {
+        ##     cs <- coef(fit)
+        ##     alpha <- mean( cs[["a"]] + cs[["a1"]]*samp[,elev] + cs[["a2"]]*samp[,canht] + 
+        ##                 cs[["a3"]]*samp[,elev]*samp[,canht] )
+        ##     beta <- mean( cs[["b"]] + cs[["b1"]]*samp[,elev] + cs[["b2"]]*samp[,canht] + 
+        ##                 cs[["b3"]]*samp[,elev]*samp[,canht] )
+        ##     ab[i+1,] <- c(alpha=alpha, beta=beta)
+        ## }
         if (update)
             ps <- coef(fit)
     }
+    ## colnames(ab) <- c("alpha", "beta")
+    ## attr(res, "ab") <- ab
     return(res)
 }
 

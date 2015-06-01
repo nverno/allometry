@@ -1,7 +1,2 @@
-- Add histograms for the size classes
-- Provide option to initialize parameters
-- RMSE with option to calculate for each bootstrap
-- alpha and beta
-- Save parameters
 - Save graphics
 - correlations

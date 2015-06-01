@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Sat May 23 12:59:35 2015 (-0400)
-## Last-Updated: Wed May 27 14:12:13 2015 (-0400)
+## Last-Updated: Sun May 31 23:09:58 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 pp <- read.csv("~/work/treedata/pp.csv")
@@ -19,7 +19,7 @@ for (i in 1:nrow(pp))
 
 ## w/o target included
 pp$cht_notarget98 <- NA
-for (i in seq_along(cht_notarget)) {
+for (i in seq_along(pp$cht_notarget98)) {
     hood <- pp[pp$BQUDX >= pp$BQUDX[i]-1 & 
                    pp$BQUDY >= pp$BQUDY[i]-1 &
                        pp$BQUDX <= pp$BQUDX[i]+1 & 
@@ -36,5 +36,5 @@ pp <- pp[pp$SPEC == "ABBA", ]
 ## Parameters from manuscript
 ps <- list(a=0.199, a1=0.000251, a2=0.00511, a3=-0.0000141, b=2.31, b1=0.00410, b2=0.92, b3=-0.000271,
            sd=1)
-
+## ps <- readRDS("~/work/allometry/gompertz/temp/ps.rds")
 saveRDS(pp, "~/work/allometry/gompertz/temp/pp.rds")

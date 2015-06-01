@@ -3,7 +3,7 @@
 ## Description: Setup data for bootstrap.Rmd
 ## Author: Noah Peart
 ## Created: Wed May 27 12:59:58 2015 (-0400)
-## Last-Updated: Wed May 27 16:25:55 2015 (-0400)
+## Last-Updated: Sun May 31 14:09:27 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 source("~/work/allometry/gompertz/model.R")
@@ -25,6 +25,7 @@ elev <- "relev"
 ## ps <- readRDS("~/work\\ecodatascripts\\vars\\heights\\gompertz\\full\\abba\\abba_98.rds")
 
 ## Parameters from manuscript
-ps <- list(a=0.199, a1=0.000251, a2=0.00511, a3=-0.0000141, b=2.31, b1=0.00410, b2=0.92, b3=-0.000271,
+paper_ps <- list(a=0.199, a1=0.000251, a2=0.00511, a3=-0.0000141, b=2.31, b1=0.00410, b2=0.92, b3=-0.000271,
            sd=1)
+ps <- readRDS("~/work/allometry/gompertz/temp/ps.rds")
 
