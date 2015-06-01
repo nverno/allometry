@@ -3,7 +3,7 @@
 ## Description: 
 ## Author: Noah Peart
 ## Created: Tue May 19 11:24:15 2015 (-0400)
-## Last-Updated: Sun May 31 17:32:10 2015 (-0400)
+## Last-Updated: Mon Jun  1 17:32:28 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(bbmle)
@@ -45,9 +45,38 @@ run_fit <- function(dat, ps, yr, method="Nelder-Mead", maxit=1e5, height="HTTCR9
     ## canht <- paste0(canht, yr)
     fit <- mle2(normNLL,
                 start = unlist(ps,recursive = FALSE),
-                data = list(x = dat[, ht], dbh=dat[, dbh], elev=dat[, elev],
+                data = list(x = dat[, height], dbh=dat[, dbh], elev=dat[, elev],
                 canht=dat[,canht]),
                 method = method,
                 control = list(maxit = maxit))
     return( fit )
 }
+
+## Normal log likelihood function with sd function
+normNLL_var <- function(params, x, dbh, elev, canht) {
+    c = params[["c"]]
+    ## c1 = params[["c1"]]
+    c2 = params[["c2"]]
+    sd = params[["sd"]]
+    mu = do.call(gompertz, list(params, dbh, elev, canht))
+    sd = c*dbh + c2*canht + sd
+    -sum(dnorm(x, mean = mu, sd = sd, log = TRUE))
+}
+
+## model with variance as function of variables
+run_fit_var <- function(dat, ps, yr, method="Nelder-Mead", maxit=1e5, height="HTTCR98",
+                        dbh="DBH98", canht="canht", elev="relev", ...) {
+    require(bbmle)
+    parnames(normNLL_var) <- c(names(ps))
+    ## ht <- paste0(height, yr)
+    ## dbh <- paste0(dbh, yr)
+    ## canht <- paste0(canht, yr)
+    fit <- mle2(normNLL_var,
+                start = unlist(ps,recursive = FALSE),
+                data = list(x = dat[, height], dbh=dat[, dbh], elev=dat[, elev],
+                    canht=dat[,canht]),
+                method = method,
+                control = list(maxit = maxit))
+    return( fit )
+}
+
