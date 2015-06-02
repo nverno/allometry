@@ -3,7 +3,7 @@
 ## Description: Figures from bootstrap results
 ## Author: Noah Peart
 ## Created: Mon Jun  1 14:48:51 2015 (-0400)
-## Last-Updated: Mon Jun  1 22:17:22 2015 (-0400)
+## Last-Updated: Tue Jun  2 12:21:29 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(ggplot2)
@@ -263,23 +263,49 @@ pp$canbins <- ifelse(pp$canbins %in% levels(pp$canbins)[c(1, 3, 5)], pp$canbins,
 mvals <- pp %>% filter(!is.na(canbins)) %>%
   group_by(ELEVCL, canbins) %>%
   summarise(melev=mean(relev), mcanht=mean(canht))
+mvals <- as.data.frame(mvals)
 
-pdat <- pp %>% filter(!is.na(canbins))
-  
-ldat <- apply(mvals, 1, function(x) {
-    out <- t(predInt(bin=1, dbh=dbhs, elev=as.numeric(x[["melev"]]), 
-                     canht=as.numeric(x[["mcanht"]])))
-    out <- as.data.frame(out)
-    out$relev <- as.numeric(x[["melev"]])
-    out$canht <- as.numeric(x[["mcanht"]])
-    out$dbhs <- dbhs
-    out$ELEVCL <- mvals[["ELEVCL"]]
-    out$canbins <- mvals[["canbins"]]
+bins <- c(1, 6)
+ldat <- lapply(1:nrow(mvals), function(x) {
+    out <- lapply(bins, function(bin) {
+        t(predInt(bin=bin, dbh=dbhs, elev=as.numeric(mvals[x,"melev"]), 
+                     canht=as.numeric(mvals[x,"mcanht"])))
+    })
+    out <- as.data.frame(do.call(rbind, out))
+    out$bin <- as.factor(rep(bins, each=length(dbhs)))
+    out$relev <- mvals[x,"melev"]
+    out$canht <- mvals[x,"mcanht"]
+    out$dbh <- dbhs
+    out$ELEVCL <- mvals[x,"ELEVCL"]
+    out$canbins <- mvals[x,"canbins"]
+    out$color <- as.factor(rep(c("black", "grey40"), each=length(dbhs)))
     out
 })
 ldat <- do.call(rbind, ldat)
 
-ggplot(ldat, aes(dbh, ht)) +
+
+## Reorder/name levels
+ldat$ELEVCL <- factor(ldat$ELEVCL, levels(ldat$ELEVCL)[c(3,4,2,1)])
+ldat$canbins <- factor(ldat$canbins)
+levels(ldat$canbins) <- c("8<C<10", "11.5<C<13.5", "15<C<17")
+levels(ldat$ELEVCL) <- c("LOW", "MID", "HIGH", "")
+
+pdat <- pp %>% filter(!is.na(canbins))
+pdat <- as.data.frame(pdat)
+pdat$ELEVCL <- factor(pdat$ELEVCL, levels(pdat$ELEVCL)[c(3,4,2,1)])
+pdat$canbins <- factor(pdat$canbins)
+levels(pdat$canbins) <- c("8<C<10", "11.5<C<13.5", "15<C<17")
+levels(pdat$ELEVCL) <- c("LOW", "MID", "HIGH", "")
+
+ggplot(ldat, aes(dbh, ht, color=bin)) + facet_wrap(~ELEVCL + canbins) +
+  geom_point(data=pdat, aes(DBH98, HTTCR98), alpha=0.8, color="grey10") +
+  xlab("DBH [cm]") + ylab("Height [m]") +
+  geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill=bin, alpha=0.1, lty=0) +
+  geom_line(lwd=1.1) + theme_bw() +
+  ## geom_line(aes(dbh, lower), lty=2) +
+  ## geom_line(aes(dbh, upper), lty=2) +
+  scale_color_manual(values = c("black", "grey50"), name="Size\nClasses")
+  ## scale_linetype_manual(values=c(1, 2))
   
   
 ################################################################################
