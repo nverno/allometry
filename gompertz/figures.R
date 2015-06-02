@@ -3,7 +3,7 @@
 ## Description: Figures from bootstrap results
 ## Author: Noah Peart
 ## Created: Mon Jun  1 14:48:51 2015 (-0400)
-## Last-Updated: Mon Jun  1 18:22:29 2015 (-0400)
+## Last-Updated: Mon Jun  1 22:17:22 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(ggplot2)
@@ -45,7 +45,7 @@ traceA <- ggplot(dat, aes(bins, value, group=bins, color=coef)) +
   ## stat_summary(fun.y=mean, geom="point", fill="black", pch=21, size=3) +
   ## stat_summary(fun.data=mean_cl_normal, geom="errorbar", color="black", width=0.25, alpha=0.7,
   ##              conf.int=0.95)
-traceA                 
+traceA
 
 traceAbox <- ggplot(dat, aes(bins, value, group=bins, color=coef)) +
   theme_bw() + xlab("Number of Size Classes") + ylab("Parameter Estimates") +
@@ -122,6 +122,48 @@ cbeta <- function(bin, elev, canht) {
 }
 cbeta <- Vectorize(cbeta, vectorize.args = c("elev", "canht"))
 
+## Estimates for manuscript
+aANDb <- Vectorize(function(bin, elev, canht) {
+    with(AB[AB$bins==bin & AB$run != 1, ],  {
+        alpha = a + a1*elev + a2*canht + a3*elev*canht
+        beta = b + b1*elev + b2*canht + b3*elev*canht
+        alpha.conf=quantile(alpha, probs=c(0.025, 0.975))
+        beta.conf=quantile(beta, probs=c(0.025, 0.975))
+        data.frame(alpha=unlist(mean(alpha)), alpha.lower=alpha.conf[[1]], alpha.upper=alpha.conf[[2]],
+                   beta=unlist(mean(beta)), beta.lower=beta.conf[[1]], beta.upper=beta.conf[[2]],
+                   elev=elev, canht=canht)
+    })
+}, vec=c("elev", "canht"))
+
+## Output tables
+library(gridExtra)
+
+elevs <- c(-100, 0, 100)
+canhts <- c(9, 12.5, 16)
+vars <- expand.grid(elev=elevs, canht=canhts)
+bin <- 1
+out1 <- as.data.frame(t(aANDb(bin=1, elev=vars$elev, canht=vars$canht)))
+out6 <- as.data.frame(t(aANDb(bin=6, elev=vars$elev, canht=vars$canht)))
+out1$alpha <- unlist(out1$alpha)
+out6$alpha <- unlist(out6$alpha)
+out1$beta <- unlist(out1$beta)
+out6$beta <- unlist(out6$beta)
+dat <- data.frame(calpha=(out1$alpha-out6$alpha)/out1$alpha, cbeta=(out1$beta-out6$beta)/out1$beta, 
+                  elev=unlist(out1$elev), canht=unlist(out1$canht))
+pdf(file = paste0("change_alpha_beta_bin1_to_6.pdf"))
+grid.table(dat, show.rownames=F, digits=2)
+dev.off()
+
+alphas1 <- out[, c("alpha", "alpha.lower", "alpha.upper", "elev", "canht")]
+pdf(file = paste0("alphas_", bin, "_bin.pdf"))
+grid.table(alphas, show.rownames=F, digits=2)
+dev.off()
+
+betas <- out[, c("beta", "beta.lower", "beta.upper", "elev", "canht")]
+pdf(file = "betas_1_bin.pdf")
+grid.table(betas, show.rownames=F, digits=2)
+dev.off()
+
 ## Combinations of elevation(residual) and canopy height to fix for calculation
 elevs <- seq(-100, 100, length=100)
 canhts <- seq(min(pp$canht), max(pp$canht), length=100)
@@ -131,6 +173,7 @@ bin <- 1
 alphaVals <- outer(elevs, canhts, calpha, bin=bin)
 betaVals <- outer(elevs, canhts, cbeta, bin=bin)
 
+library(lattice)
 wireframe(alphaVals, row.values = elevs, column.values = canhts, 
           zlab="alpha", xlab="Residual Elevation",
           ylab="Canopy Height")
@@ -219,16 +262,26 @@ pp$canbins <- cut(pp$canht, breaks=c(8, 10, 11.5, 13.5, 15, 17))
 pp$canbins <- ifelse(pp$canbins %in% levels(pp$canbins)[c(1, 3, 5)], pp$canbins, NA)
 mvals <- pp %>% filter(!is.na(canbins)) %>%
   group_by(ELEVCL, canbins) %>%
-  summarise(melev=mean(ELEV), mcanht=mean(canht))
+  summarise(melev=mean(relev), mcanht=mean(canht))
 
-bins <- 1
+pdat <- pp %>% filter(!is.na(canbins))
+  
 ldat <- apply(mvals, 1, function(x) {
-    out <- lapply(bins, function(bin) {
-        t(predInt(bin=bin, dbh=dbhs, elev=x[["melev"]], canht=x[["mcanht"]]))
-    })
-    out <- as.data.frame(do.call(rbind, out))
+    out <- t(predInt(bin=1, dbh=dbhs, elev=as.numeric(x[["melev"]]), 
+                     canht=as.numeric(x[["mcanht"]])))
+    out <- as.data.frame(out)
+    out$relev <- as.numeric(x[["melev"]])
+    out$canht <- as.numeric(x[["mcanht"]])
+    out$dbhs <- dbhs
+    out$ELEVCL <- mvals[["ELEVCL"]]
+    out$canbins <- mvals[["canbins"]]
+    out
 })
+ldat <- do.call(rbind, ldat)
 
+ggplot(ldat, aes(dbh, ht)) +
+  
+  
 ################################################################################
 ##
 ##                               Correlations
