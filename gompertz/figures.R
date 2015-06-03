@@ -3,7 +3,7 @@
 ## Description: Figures from bootstrap results
 ## Author: Noah Peart
 ## Created: Mon Jun  1 14:48:51 2015 (-0400)
-## Last-Updated: Tue Jun  2 12:21:29 2015 (-0400)
+## Last-Updated: Tue Jun  2 23:26:07 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(ggplot2)
@@ -265,7 +265,9 @@ mvals <- pp %>% filter(!is.na(canbins)) %>%
   summarise(melev=mean(relev), mcanht=mean(canht))
 mvals <- as.data.frame(mvals)
 
-bins <- c(1, 6)
+bins <- c(1)
+greys <- c("black", "grey40")
+colors <- greys[1:length(bins)]
 ldat <- lapply(1:nrow(mvals), function(x) {
     out <- lapply(bins, function(bin) {
         t(predInt(bin=bin, dbh=dbhs, elev=as.numeric(mvals[x,"melev"]), 
@@ -278,36 +280,162 @@ ldat <- lapply(1:nrow(mvals), function(x) {
     out$dbh <- dbhs
     out$ELEVCL <- mvals[x,"ELEVCL"]
     out$canbins <- mvals[x,"canbins"]
-    out$color <- as.factor(rep(c("black", "grey40"), each=length(dbhs)))
+    out$color <- as.factor(rep(colors, each=length(dbhs)))
     out
 })
 ldat <- do.call(rbind, ldat)
 
-
 ## Reorder/name levels
-ldat$ELEVCL <- factor(ldat$ELEVCL, levels(ldat$ELEVCL)[c(3,4,2,1)])
+canNames <- c("Low (8-10)", "Mid (11.5-13.5)", "High (15-17)")
+elevOrder <- c(2,4,3,1)  # HML
+elevNames <- c("", "High (1115-1180)", "Low (808-840)", "Mid (963-1030)")[elevOrder]
+
+ldat$ELEVCL <- factor(ldat$ELEVCL, levels(ldat$ELEVCL)[elevOrder])  # LMH c(3,4,2,1)
 ldat$canbins <- factor(ldat$canbins)
-levels(ldat$canbins) <- c("8<C<10", "11.5<C<13.5", "15<C<17")
-levels(ldat$ELEVCL) <- c("LOW", "MID", "HIGH", "")
+levels(ldat$canbins) <- canNames
+levels(ldat$ELEVCL) <- elevNames
 
 pdat <- pp %>% filter(!is.na(canbins))
 pdat <- as.data.frame(pdat)
-pdat$ELEVCL <- factor(pdat$ELEVCL, levels(pdat$ELEVCL)[c(3,4,2,1)])
+pdat$ELEVCL <- factor(pdat$ELEVCL, levels(pdat$ELEVCL)[elevOrder])
 pdat$canbins <- factor(pdat$canbins)
-levels(pdat$canbins) <- c("8<C<10", "11.5<C<13.5", "15<C<17")
-levels(pdat$ELEVCL) <- c("LOW", "MID", "HIGH", "")
+levels(pdat$canbins) <- canNames
+levels(pdat$ELEVCL) <- elevNames
 
-ggplot(ldat, aes(dbh, ht, color=bin)) + facet_wrap(~ELEVCL + canbins) +
+p <- ggplot(ldat, aes(dbh, ht)) + 
+  ## facet_wrap(~ELEVCL + canbins) +
+  facet_grid(ELEVCL ~ canbins) +
+  geom_point(data=pdat, aes(DBH98, HTTCR98), alpha=0.8, color="grey10") +
+  xlab("DBH (cm)") + ylab("Height (m)") +
+  geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill=bin, alpha=0.1, lty=0) +
+  geom_line(lwd=1.1) + theme_bw() + 
+  ## geom_line(aes(dbh, lower), lty=2) +
+  ## geom_line(aes(dbh, upper), lty=2) +
+  ## scale_color_manual(values = c("black", "grey50"), name="Size\nClasses") +
+  ## scale_linetype_manual(values=c(1, 2))
+  theme(
+      ## Strip labels/grid/background
+      panel.grid=element_blank(), 
+      ## strip.text=element_blank(), 
+      strip.background=element_blank(),
+      ## text themes
+      axis.text=element_text(size=14), axis.title=element_text(size=14, face="bold"),
+      strip.text.x=element_text(size=12, face="bold"),
+      strip.text.y=element_text(size=12, face="bold", angle=270)
+  )
+
+## Adding outer labels
+library(gtable) 
+z <- ggplot_gtable(ggplot_build(p))
+
+## add label for right strip
+z <- gtable_add_cols(z, unit(1, "cm"))
+z <- gtable_add_grob(z, 
+  list(rectGrob(gp = gpar(col=NA, fill=NA)), #fill = gray(0.5))),
+  textGrob("Elevation (m)", rot = -90, gp = gpar(col = "black", fontsize=17, fontface="bold"))),
+  4, 10, 8, 11, name = paste(runif(2)))
+
+## add label for top strip
+z <- gtable_add_rows(z, z$heights[[10]], 2)
+z <- gtable_add_grob(z, 
+  list(rectGrob(gp = gpar(col = NA, fill=NA)), # fill = gray(0.5))),
+  textGrob("Canopy Height (m)", gp = gpar(col = "black", fontsize=17, fontface="bold"))),
+  3, 4, 3, 8, name = paste(runif(2)))
+
+## add margins
+z <- gtable_add_cols(z, unit(1/8, "line"), 7)
+z <- gtable_add_rows(z, unit(1/8, "line"), 3)
+
+## draw it
+grid.newpage()
+grid.draw(z)
+  
+################################################################################
+##
+##                              Appendix figure
+##
+################################################################################
+## Residual elevation on vertical (-100, 0, 100)
+## Each panel: Ht vs. DBH for canopy (9, 12.5, 16) for bins (1, 6)
+dbhs <- seq(0, max(pp$DBH98), length=100)
+elevs <- c(-100, 0, 100)
+canhts <- c(9, 12.5, 16)
+vars <- expand.grid(elev=elevs, canht=canhts)
+bins <- c(1, 6)
+
+## Confidence intervals in ggplot
+dat <- apply(vars, 1, function(x) {
+    out <- lapply(bins, function(bin) {
+        t(predInt(bin=bin, dbh=dbhs, elev=x[["elev"]], canht=x[["canht"]]))
+    })
+    out <- as.data.frame(do.call(rbind, out))
+    out$bin <- as.factor(rep(bins, each=length(dbhs)))
+    out$elev <- as.factor(x[["elev"]])
+    out$canht <- as.factor(x[["canht"]])
+    out$dbh <- dbhs
+    out
+})
+dat <- do.call(rbind, dat)
+dat$elev <- factor(dat$elev, levels(dat$elev)[3:1])
+    
+ggplot(dat, aes(dbh, ht, group=interaction(canht, bin), color=bin, linetype=canht)) + 
+  geom_line(lwd=1.05) +
+  geom_ribbon(aes(x=dbh, ymin=lower, ymax=upper, fill=bin), alpha=0.2, lty=0) +
+  ## geom_line(aes(dbh, lower), alpha=0.3, lty=2) +
+  ## geom_line(aes(dbh, upper), alpha=0.3, lty=2) +
+  facet_grid(elev ~ .) +
+  theme_bw() +
+  xlab("DBH (cm)") + ylab("Height (m)") + 
+  scale_color_discrete(name="Size\nClasses") +
+  scale_fill_discrete(name="Size\nClasses") +
+  scale_linetype_discrete(name="Canopy\nHeight") +
+  theme(panel.grid=element_blank(),
+        axis.text=element_text(size=14), 
+        axis.title=element_text(size=14, face="bold"),
+        strip.text.y=element_text(size=12, face="bold", angle=270)
+        )
+
+## Reorder/name levels
+## canNames <- c("Low [8, 10]", "Mid [11.5, 13.5]", "High [15, 17]")
+## elevOrder <- c(2,4,3,1)  # HML
+## elevNames <- c("", "High [1115, 1180]", "Low [808, 840]", "Mid [963, 1030]")[elevOrder]
+
+ldat$ELEVCL <- factor(ldat$ELEVCL, levels(ldat$ELEVCL)[elevOrder])  # LMH c(3,4,2,1)
+ldat$canbins <- factor(ldat$canbins)
+levels(ldat$canbins) <- canNames
+levels(ldat$ELEVCL) <- elevNames
+
+pdat <- pp %>% filter(!is.na(canbins))
+pdat <- as.data.frame(pdat)
+pdat$ELEVCL <- factor(pdat$ELEVCL, levels(pdat$ELEVCL)[elevOrder])
+pdat$canbins <- factor(pdat$canbins)
+levels(pdat$canbins) <- canNames
+levels(pdat$ELEVCL) <- elevNames
+
+p <- ggplot(ldat, aes(dbh, ht)) + 
+  ## facet_wrap(~ELEVCL + canbins) +
+  facet_grid(ELEVCL ~ canbins) +
   geom_point(data=pdat, aes(DBH98, HTTCR98), alpha=0.8, color="grey10") +
   xlab("DBH [cm]") + ylab("Height [m]") +
   geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill=bin, alpha=0.1, lty=0) +
-  geom_line(lwd=1.1) + theme_bw() +
+  geom_line(lwd=1.1) + theme_bw() + 
   ## geom_line(aes(dbh, lower), lty=2) +
   ## geom_line(aes(dbh, upper), lty=2) +
-  scale_color_manual(values = c("black", "grey50"), name="Size\nClasses")
+  ## scale_color_manual(values = c("black", "grey50"), name="Size\nClasses") +
   ## scale_linetype_manual(values=c(1, 2))
-  
-  
+  theme(
+      ## Strip labels/grid/background
+      panel.grid=element_blank(), 
+      ## strip.text=element_blank(), 
+      strip.background=element_blank(),
+      ## text themes
+      axis.text=element_text(size=14), axis.title=element_text(size=14, face="bold"),
+      strip.text.x=element_text(size=12, face="bold"),
+      strip.text.y=element_text(size=12, face="bold", angle=270)
+  )
+
+
+
 ################################################################################
 ##
 ##                               Correlations
