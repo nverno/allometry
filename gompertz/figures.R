@@ -3,7 +3,7 @@
 ## Description: Figures from bootstrap results
 ## Author: Noah Peart
 ## Created: Mon Jun  1 14:48:51 2015 (-0400)
-## Last-Updated: Tue Jun  2 23:26:07 2015 (-0400)
+## Last-Updated: Thu Jul 23 15:38:40 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(ggplot2)
@@ -254,7 +254,11 @@ ggplot(dat, aes(dbh, ht, group=canht, color=canht)) +
   facet_wrap(~bin + elev, as.table=F) +
   theme_bw()
     
-## Nine-panel graph: canopy vs elevation, ht vs dbh
+################################################################################
+##
+##             Nine-panel graph: canopy vs elevation, ht vs dbh
+##
+################################################################################
 ## groups: 
 ## - canopy: [15,17], [11.5, 13.5], [8, 10]
 ## - elev: low, mid, high
@@ -305,24 +309,28 @@ levels(pdat$ELEVCL) <- elevNames
 p <- ggplot(ldat, aes(dbh, ht)) + 
   ## facet_wrap(~ELEVCL + canbins) +
   facet_grid(ELEVCL ~ canbins) +
-  geom_point(data=pdat, aes(DBH98, HTTCR98), alpha=0.8, color="grey10") +
-  xlab("DBH (cm)") + ylab("Height (m)") +
-  geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill=bin, alpha=0.1, lty=0) +
-  geom_line(lwd=1.1) + theme_bw() + 
+  geom_point(data=pdat, aes(DBH98, HTTCR98), size=1, alpha=0.6, color="grey10") +
+  xlab("Diameter (cm)") + ylab("Height (m)") +
+  geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill="grey", alpha=0.5, lty=0) +
+  geom_line(lwd=0.3) + theme_bw() + 
   ## geom_line(aes(dbh, lower), lty=2) +
   ## geom_line(aes(dbh, upper), lty=2) +
   ## scale_color_manual(values = c("black", "grey50"), name="Size\nClasses") +
   ## scale_linetype_manual(values=c(1, 2))
   theme(
       ## Strip labels/grid/background
-      panel.grid=element_blank(), 
+      panel.grid=element_blank(),
+      panel.grid.minor = element_line(),
       ## strip.text=element_blank(), 
       strip.background=element_blank(),
       ## text themes
-      axis.text=element_text(size=14), axis.title=element_text(size=14, face="bold"),
-      strip.text.x=element_text(size=12, face="bold"),
-      strip.text.y=element_text(size=12, face="bold", angle=270)
+      axis.text=element_text(size=10), axis.title=element_text(size=12),
+      strip.text.x=element_text(size=11),
+      strip.text.y=element_text(size=11, angle=270),
+      axis.ticks.length=unit(.15, "cm"),
+      axis.ticks.margin=unit(0.25, "cm")
   )
+p
 
 ## Adding outer labels
 library(gtable) 
@@ -332,14 +340,14 @@ z <- ggplot_gtable(ggplot_build(p))
 z <- gtable_add_cols(z, unit(1, "cm"))
 z <- gtable_add_grob(z, 
   list(rectGrob(gp = gpar(col=NA, fill=NA)), #fill = gray(0.5))),
-  textGrob("Elevation (m)", rot = -90, gp = gpar(col = "black", fontsize=17, fontface="bold"))),
+  textGrob("Elevation (m)", rot = -90, gp = gpar(col = "black", fontsize=13))),
   4, 10, 8, 11, name = paste(runif(2)))
 
 ## add label for top strip
 z <- gtable_add_rows(z, z$heights[[10]], 2)
 z <- gtable_add_grob(z, 
   list(rectGrob(gp = gpar(col = NA, fill=NA)), # fill = gray(0.5))),
-  textGrob("Canopy Height (m)", gp = gpar(col = "black", fontsize=17, fontface="bold"))),
+  textGrob("Canopy height (m)", gp = gpar(col = "black", fontsize=13))),
   3, 4, 3, 8, name = paste(runif(2)))
 
 ## add margins
@@ -349,7 +357,8 @@ z <- gtable_add_rows(z, unit(1/8, "line"), 3)
 ## draw it
 grid.newpage()
 grid.draw(z)
-  
+
+## ggsave("nine_panel.pdf")
 ################################################################################
 ##
 ##                              Appendix figure
@@ -435,7 +444,6 @@ p <- ggplot(ldat, aes(dbh, ht)) +
   )
 
 
-
 ################################################################################
 ##
 ##                               Correlations
@@ -464,3 +472,114 @@ pairs(AB[, pars], upper.panel = panel.cor)
 
 pars <- c("b", "b1", "b2", "b3")
 pairs(AB[, pars], upper.panel = panel.cor)
+
+
+################################################################################
+##
+##                              Two-panel graph
+##
+################################################################################
+dbhs <- seq(0, max(pp$DBH98), length=100)
+elevs <- c(-150, 0, 150)
+canhts <- seq(5, 20, by=5)
+cht <- 12.2
+## vars <- expand.grid(elev=elevs, canht=canhts)
+
+## ggplot
+library(cowplot)
+es <- sapply(elevs, function(x) gompertz(ps, dbhs, x, cht))
+cs <- sapply(canhts, function(x) gompertz(ps, dbhs, 0, x))
+
+dat <- data.frame(x=rep(dbhs, sum(length(elevs), length(canhts))),
+                  y=c(es, cs),
+                  group=rep(1:(length(elevs)+length(canhts)), each=100),
+                  type=rep(2:1, times=c(length(elevs), length(canhts))*100))
+
+library(grid)
+ctext <- list(x=25, y=c(19, 6))
+p1 <- ggplot(dat[dat$type == 1, ], aes(x, y, group=group)) +
+  geom_line() +
+  xlab("Diameter (cm)") +
+  ylab("Height (m)") +
+  theme_classic() +
+  annotate(geom="text", x=ctext$x, y=ctext$y, label=c("C+", "C-")) +
+  ylim(0, 20) +
+  theme(
+      ## Strip labels/grid/background
+      panel.grid=element_blank(),
+      panel.grid.minor = element_line(),
+      ## strip.text=element_blank(), 
+      strip.background=element_blank(),
+      ## text themes
+      axis.text=element_text(size=10), axis.title=element_text(size=12),
+      strip.text.x=element_text(size=11),
+      strip.text.y=element_text(size=11, angle=270),
+      axis.title.x = element_text(vjust=-0.5),
+      axis.title.y = element_text(vjust=1.5),
+      axis.ticks.length=unit(.15, "cm"),
+      axis.ticks.margin=unit(0.25, "cm")
+  )
+
+etext <- list(x=15, y=c(9, 11.5))
+p2 <- ggplot(dat[dat$type == 2, ], aes(x, y, group=group)) +
+  geom_line() +
+  xlab("Diameter (cm)") +
+  ylab("Height (m)") +
+  theme_classic() +
+  annotate(geom="text", x=etext$x, y=etext$y, label=c("E+", "E-")) +
+  ylim(0, 20) +
+  theme(
+      ## Strip labels/grid/background
+      panel.grid=element_blank(),
+      panel.grid.minor = element_line(),
+      ## strip.text=element_blank(), 
+      strip.background=element_blank(),
+      ## text themes
+      axis.text=element_text(size=10), axis.title=element_text(size=12),
+      strip.text.x=element_text(size=11),
+      strip.text.y=element_text(size=11, angle=270),
+      axis.title.x = element_text(vjust=-0.4),
+      axis.title.y = element_text(vjust=1.4),
+      axis.ticks.length=unit(.15, "cm"),
+      axis.ticks.margin=unit(0.25, "cm")
+  )
+
+## Construct layout
+grid.newpage()
+pushViewport(viewport(layout=grid.layout(1, 2)))
+print(p1, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+print(p2, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+
+## pdf/view function
+f <- function(width=5, height=5, fname="a", temp=T) {
+    if (temp) {
+        pdf(tf <- tempfile(fileext = ".pdf"), height = height, width=width)
+    } else
+        pdf(fname, height=height, width=width)
+    plot_grid(p1, p2, labels=c("a)", "b)"), ncol=2)
+    dev.off() 
+    shell.exec(tf) 
+}
+f()
+
+## Arrange graphs
+library(cowplot)
+pdf("two_panel.pdf", width=8, height=4)
+plot_grid(p1, p2, labels=c("a)", "b)"), ncol=2)
+dev.off()
+
+## Base R
+par(mfrow = c(1, 2))
+plot(pp$DBH98, pp$HTTCR98, type="n", frame.plot=F)
+axis(4)
+
+for (canht in canhts) {
+    ys <- gompertz(ps, dbhs, elev=0, canht=canht)
+    points(dbhs, ys, type="l")
+}
+
+plot(pp$DBH98, pp$HTTCR98, type="n")
+for (elev in elevs) {
+    ys <- gompertz(ps, dbhs, elev=elev, canht=12.2)
+    points(dbhs, ys, type="l")
+}
