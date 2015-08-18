@@ -3,7 +3,7 @@
 ## Description: Figures from bootstrap results
 ## Author: Noah Peart
 ## Created: Mon Jun  1 14:48:51 2015 (-0400)
-## Last-Updated: Thu Jul 23 15:38:40 2015 (-0400)
+## Last-Updated: Tue Aug 18 12:59:38 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(ggplot2)
@@ -309,7 +309,7 @@ levels(pdat$ELEVCL) <- elevNames
 p <- ggplot(ldat, aes(dbh, ht)) + 
   ## facet_wrap(~ELEVCL + canbins) +
   facet_grid(ELEVCL ~ canbins) +
-  geom_point(data=pdat, aes(DBH98, HTTCR98), size=1, alpha=0.6, color="grey10") +
+  geom_point(data=pdat, aes(DBH98, HTTCR98), size=1.1, alpha=0.6, color="grey10") +
   xlab("Diameter (cm)") + ylab("Height (m)") +
   geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill="grey", alpha=0.5, lty=0) +
   geom_line(lwd=0.3) + theme_bw() + 
@@ -324,7 +324,7 @@ p <- ggplot(ldat, aes(dbh, ht)) +
       ## strip.text=element_blank(), 
       strip.background=element_blank(),
       ## text themes
-      axis.text=element_text(size=10), axis.title=element_text(size=12),
+      axis.text=element_text(size=12), axis.title=element_text(size=14),
       strip.text.x=element_text(size=11),
       strip.text.y=element_text(size=11, angle=270),
       axis.ticks.length=unit(.15, "cm"),
@@ -511,7 +511,8 @@ p1 <- ggplot(dat[dat$type == 1, ], aes(x, y, group=group)) +
       ## strip.text=element_blank(), 
       strip.background=element_blank(),
       ## text themes
-      axis.text=element_text(size=10), axis.title=element_text(size=12),
+      axis.text=element_text(size=13, face="plain"),
+      axis.title=element_text(size=15, face="plain"),
       strip.text.x=element_text(size=11),
       strip.text.y=element_text(size=11, angle=270),
       axis.title.x = element_text(vjust=-0.5),
@@ -535,7 +536,8 @@ p2 <- ggplot(dat[dat$type == 2, ], aes(x, y, group=group)) +
       ## strip.text=element_blank(), 
       strip.background=element_blank(),
       ## text themes
-      axis.text=element_text(size=10), axis.title=element_text(size=12),
+      axis.text=element_text(size=13, face="plain"),
+      axis.title=element_text(size=15, face="plain"),
       strip.text.x=element_text(size=11),
       strip.text.y=element_text(size=11, angle=270),
       axis.title.x = element_text(vjust=-0.4),
