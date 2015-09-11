@@ -3,7 +3,7 @@
 ## Description: Figures from bootstrap results
 ## Author: Noah Peart
 ## Created: Mon Jun  1 14:48:51 2015 (-0400)
-## Last-Updated: Tue Aug 18 12:59:38 2015 (-0400)
+## Last-Updated: Thu Sep 10 15:47:34 2015 (-0400)
 ##           By: Noah Peart
 ######################################################################
 library(ggplot2)
@@ -310,7 +310,7 @@ p <- ggplot(ldat, aes(dbh, ht)) +
   ## facet_wrap(~ELEVCL + canbins) +
   facet_grid(ELEVCL ~ canbins) +
   geom_point(data=pdat, aes(DBH98, HTTCR98), size=1.1, alpha=0.6, color="grey10") +
-  xlab("Diameter (cm)") + ylab("Height (m)") +
+  xlab("Diameter (cm)") + ylab("Tree Height (m)") +
   geom_ribbon(data=ldat[ldat$bin==1,], aes(x=dbh, ymin=lower, ymax=upper), fill="grey", alpha=0.5, lty=0) +
   geom_line(lwd=0.3) + theme_bw() + 
   ## geom_line(aes(dbh, lower), lty=2) +
@@ -355,10 +355,12 @@ z <- gtable_add_cols(z, unit(1/8, "line"), 7)
 z <- gtable_add_rows(z, unit(1/8, "line"), 3)
 
 ## draw it
+pdf("nine_panel.pdf", width=5, height=5)
 grid.newpage()
 grid.draw(z)
+dev.off()
 
-## ggsave("nine_panel.pdf")
+## ggsave("nine_panel.pdf", width=5, height=5)
 ################################################################################
 ##
 ##                              Appendix figure
